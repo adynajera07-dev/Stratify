@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stratify</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <style>
+        .thumb { height: 70px; object-fit: cover; border-radius: .35rem; }
+        .thumbs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    </style>
+    
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#0d6efd" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<style>
+
+  #btnInstall {
+    position: fixed; right: 16px; bottom: 16px;
+    padding: 12px 16px; border: 0; border-radius: 10px;
+    background: #9f3ec5; color: white; font-size: 14px; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.2); z-index: 9999;
+  }
+  #btnInstall[hidden] { display: none; }
+</style>
+
+</head>
+<body class="bg-dark">
+    <div class="container py-5">
+        <div class="text-center mb-4">
+            <h1 class="display-4 text-primary mb-3 pb-4 fw-bold">Stratify</h1>
+            <button type="button" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#productoModal">
+                Añadir servicio
+            </button>
+            <button id="clearAll" class="btn btn-light text-dark btn-lg ms-2">
+                Limpiar todo
+            </button>
+        </div>
+        <!--Contenedor para mostrar los productos-->
+        <div id="productosContainer" class="row g-4"></div>
+    </div>
+    <!--Modal: Formulario-->
+    <div class="modal fade" id="productoModal" tabindex="-1" aria-labelledby="productoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="productoModalLabel">Registro de Nuevo Servicio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 bg-dark text-white" style="background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(fondo.png);background-size: cover; background-position: center; background-repeat: no-repeat;">
+                    <form id="productoForm">
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+                                <label for="claveProducto" class="form-label">Clave*</label>
+                                <input type="text" class="form-control" id="claveProducto" placeholder="Clave de producto" required>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="nombreProducto" class="form-label">Nombre del servicio*</label>
+                                <input type="text" class="form-control" id="nombreProducto" placeholder="Ej: Edicion  de reels" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="estadoProducto" class="form-label">Categoria*</label>
+                                <select class="form-select" id="estadoProducto" required>
+                                    <option value="">Seleccionar categoria</option>
+                                    <option value="podcast">Podcast</option>
+                                    <option value="publicidad">Publicidad-Digital</option>
+                                    <option value="sitios">Sitios-web</option>
+                                    <option value="auto">Automatizacion</option>
+                                    <option value="fotografia">Fotografia</option>
+                                    <option value="edicion">Edicion audiovisual</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="precio" class="form-label">Precio*</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precio" placeholder="0.00" step="0.01" required>
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="Encargado" class="form-label">Encargado</label>
+                                <textarea class="form-control" id="stock" rows="3" placeholder="Encargado"></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="descripcion" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="descripcion" rows="3" placeholder="Describe el servicio..."></textarea>
+                            </div>
+                            <!--MODIFICACION: SUBIR una o varias imagenes-->
+                            <div class="col-12">
+                                <label for="imagenes" class="form-label">Imágenes (puedes subir una o varias)</label>
+                                <input type="file" id="imagenes" class="form-control" accept="image/*" multiple />
+                                <div class="form-text text-white">Se guardan de forma temporal como Data URLs en el LocalStorage (límite aproximado total 5-10 MB por sitio).</div>
+                            </div>
+                        </div>
+                    </form>
+                </div> 
+                <div class="modal-footer bg-dark">
+                    <button type="button" class="btn btn-secondary text-dark" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="productoForm" class="btn btn-info">Guardar Servicio</button>
+                </div>
+            </div>
+        </div>
+    </div> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let productos = [];
+        
+        const LS_KEY = 'productos';
+
+        const modal = new bootstrap.Modal(document.getElementById('productoModal'));
+
+        function saveToLS() {
+            localStorage.setItem(LS_KEY, JSON.stringify(productos));
+        }
+
+        function loadFromLS() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                productos = raw ? JSON.parse(raw) : [];
+            } catch (e) {
+                console.warn('LocalStorage corrupto, se reinicia.', e);
+                productos = [];
+                localStorage.removeItem(LS_KEY);
+            }
+        }
+
+        function currencyMX(n) {
+            return Number(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function readFilesAsDataURLs(filelist) {
+            const files = Array.from(filelist || []);
+            const readers = files.map(
+                (file) => 
+                    new Promise((resolve, reject) => {
+                        const fr = new FileReader();
+                        fr.onload = () => resolve({ name: file.name, type: file.type, dataURL: fr.result });
+                        fr.onerror = reject;
+                        fr.readAsDataURL(file);
+                    })
+            );
+            return Promise.all(readers);
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('productosContainer');
+            container.innerHTML = '';
+
+            const estadoClasses = {
+                podcast: 'info',
+                'publicidad': 'primary',
+                'sitios': 'warning',
+                'fotografia':'danger',
+                'edicion':'dark',
+                auto: 'success'
+            };
+
+            const estadoTexto = {
+                podcast: 'Podcast',
+                'publicidad': 'Publicidad-Digital',
+                'sitios': 'Sitios-web',
+                'fotografia':'Fotografia',
+                'edicion':'Edicion-Audiovisual',
+                auto: 'Automatizacion'
+            };
+
+            // Recorrer y crear tarjetas por producto
+            productos.forEach((producto, idx) => {
+                const col = document.createElement('div');
+                col.className = 'col-md-6 col-lg-4 mb-4';
+
+                const thumbs = (producto.imagenes || []).slice(0, 3) 
+                .map((img) => `<img class="thumb w-100" src="${img.dataURL}" alt="${producto.nombre}" />`)
+                .join('');
+                
+                const extraCount = (producto.imagenes?.length || 0) - 3;
+                const extraBadge = extraCount > 0 ? `<span class="badge bg-secondary">+${extraCount} más</span>` : '';
+
+                col.innerHTML = `
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-${estadoClasses[producto.estado]} text-white d-flex align-items-center justify-content-between">
+                            <h5 class="card-title mb-0">${producto.nombre}</h5>
+                            <button class="btn btn-sm btn-light" data-action="delete" data-index="${idx}" title="Eliminar">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text mb-2">
+                                <strong>Clave:</strong> ${producto.clave}<br />
+                                <strong>Encargado:</strong> ${producto.stock}<br />
+                                <strong>Precio:</strong> $${currencyMX(producto.precio)}<br />
+                            </p>
+                            
+                            ${producto.descripcion ? `<p class="card-text text-muted"><small>${producto.descripcion}</small></p>` : ''}
+                            ${producto.imagenes && producto.imagenes.length
+                                ? `<div class="thumbs-grid mt-2">${thumbs}</div>${extraBadge ? `<div class="mt-2">${extraBadge}</div> ` : ''} `
+                                : '<div class="text-muted"><em>Sin imágenes</em></div>'}
+                        </div>
+                        <div class="card-footer">
+                            <span class="badge bg-${estadoClasses[producto.estado]} w-100">${estadoTexto[producto.estado]}</span>
+                        </div>
+                    </div>`;
+
+                container.appendChild(col);
+            });
+
+            container.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    const i = Number(e.currentTarget.getAttribute('data-index'));
+                    productos.splice(i, 1);
+                    saveToLS();
+                    renderProjects();
+                });
+            });
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-bg-' + (type === 'success' ? 'success' : 'danger') + ' position-fixed top-0 end-0 m-3';
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${msg}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>`;
+            document.body.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            setTimeout (() => toast.remove(), 3500);
+        }
+
+        document.getElementById('productoForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const imagenesInput = document.getElementById('imagenes');
+            let imagenes = [];
+            try {
+                imagenes = await readFilesAsDataURLs(imagenesInput.files);
+            } catch (err) {
+                console.error('Error leyendo imágenes', err);
+                showToast('Hubo un problema leyendo las imágenes', 'error');
+            }
+
+            const producto = {
+                id: crypto.randomUUID(),
+                nombre: document.getElementById('nombreProducto').value.trim(),
+                clave: document.getElementById('claveProducto').value.trim(),
+                precio: parseFloat(document.getElementById('precio').value),
+                estado: document.getElementById('estadoProducto').value,
+                stock: document.getElementById('stock').value.trim(),
+                descripcion: document.getElementById('descripcion').value.trim(),
+                imagenes,
+            };
+
+            productos.push(producto);
+            saveToLS();
+            renderProjects();
+
+            // limpiar y cerrar
+            this.reset();
+            modal.hide();
+            showToast('Descargable guardado correctamente');
+        });
+
+
+        // cargar al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLS();
+            renderProjects();
+
+            // Evento: Limpiar todo el LocalStorage
+            document.getElementById('clearAll').addEventListener('click', () => {
+                if (confirm('¿Seguro que deseas borrar todos los descargables guardados en este navegador?')) {
+                    productos = [];
+                    saveToLS();
+                    renderProjects();
+
+                    showToast('LocalStorage limpiado');
+               }
+      });
+    });
+  </script>
+<button id="btnInstall" hidden>Instalar app</button>
+
+<script>
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('SW registrado:', reg.scope))
+      .catch(err => console.warn('SW fallo:', err));
+  });
+}
+
+// Manejo del "beforeinstallprompt" para mostrar botón de instalar
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('btnInstall');
+  if (btn) btn.hidden = false;
+});
+
+// Click en el botón para lanzar el prompt
+document.addEventListener('click', async (e) => {
+  if (e.target && e.target.id === 'btnInstall') {
+    if (!deferredPrompt) return;
+    e.target.disabled = true;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log('Instalación:', outcome);
+    deferredPrompt = null;
+    e.target.hidden = true;
+  }
+});
+
+// Evento cuando la app fue instalada
+window.addEventListener('appinstalled', () => {
+  console.log('PWA instalada');
+  const btn = document.getElementById('btnInstall');
+  if (btn) btn.hidden = true;
+});
+</script>
+
+</body>
+</html>
